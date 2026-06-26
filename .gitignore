@@ -1,0 +1,45 @@
+# Credentials and secrets — never commit these
+.env
+.env.*
+*.env
+credentials.json
+secrets.json
+*_credentials.*
+*_secret.*
+
+# FCS CLI binary and downloads
+fcs
+fcs.exe
+fcs_*.tar.gz
+fcs_*.zip
+
+# Scan output artifacts
+*.sarif
+*-scan-results.json
+*-scan-results.sarif
+image-scan-results.*
+iac-scan-output/
+scan-output/
+reports/
+*.html
+
+# Script logs
+logs/
+*.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+tmp/
+temp/
+*.tmp

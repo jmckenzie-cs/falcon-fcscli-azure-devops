@@ -1,0 +1,160 @@
+# Falcon Cloud Security — Azure DevOps Combined Pipeline
+#
+# Runs both IaC scanning and container image scanning in sequence.
+# IaC scan runs first; image scan is blocked until IaC passes.
+#
+# PREREQUISITES
+#   Variable group: falcon-credentials
+#     FALCON_CLIENT_ID     — CrowdStrike OAuth2 Client ID  (mark as secret)
+#     FALCON_CLIENT_SECRET — CrowdStrike OAuth2 Client Secret (mark as secret)
+#
+# SETUP
+#   1. In Azure DevOps: Pipelines → Library → + Variable group
+#   2. Name it "falcon-credentials" and add the two variables above
+#   3. On the Pipeline permissions tab, authorize this pipeline
+#   4. Update IMAGE_TAG below to match your image name
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - iac/**
+      - containers/**
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Variable group supplies FALCON_CLIENT_ID and FALCON_CLIENT_SECRET as secrets
+  - group: falcon-credentials
+  # Update this to match your image name and tag convention
+  - name: IMAGE_TAG
+    value: 'myapp:$(Build.SourceVersion)'
+
+stages:
+  - stage: SecurityScan
+    displayName: 'Security Scanning'
+    jobs:
+
+      # ---------------------------------------------------------------
+      # Job 1: IaC Scan
+      # Scans all Infrastructure as Code under the iac/ directory.
+      # Results are published as a pipeline artifact for review.
+      # The gate step re-raises the exit code after artifact upload.
+      # ---------------------------------------------------------------
+      - job: IaCScan
+        displayName: 'IaC Security Scan'
+        steps:
+          - checkout: self
+
+          # Download FCSCLI using API credentials from the variable group
+          - bash: bash scripts/download-fcscli.sh
+            displayName: 'Download FCSCLI'
+            env:
+              FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
+              FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+
+          # Run IaC scan; continueOnError lets us upload artifacts before failing
+          - bash: |
+              mkdir -p iac-scan-output
+              ./fcs scan iac \
+                --path iac/ \
+                --report-formats json,sarif \
+                --output-path iac-scan-output/ \
+                --upload \
+                --fail-on "critical=1,high=1"
+              IAC_EXIT=$?
+              # Propagate exit code to the gate step via a pipeline variable
+              echo "##vso[task.setvariable variable=IacScanExit]$IAC_EXIT"
+              exit $IAC_EXIT
+            displayName: 'Run IaC Scan'
+            continueOnError: true
+            env:
+              FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
+              FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+
+          # Always publish artifacts so results are available even on failure
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish IaC Scan Results'
+            condition: always()
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)/iac-scan-output'
+              artifact: 'iac-scan-results'
+              publishLocation: 'pipeline'
+
+          # Gate: fail the job after artifacts are uploaded
+          - bash: |
+              if [ "$(IacScanExit)" != "0" ]; then
+                echo "##vso[task.logissue type=error]IaC scan failed (exit code $(IacScanExit)). Review the iac-scan-results artifact."
+                exit 1
+              fi
+            displayName: 'Enforce IaC Gate'
+
+      # ---------------------------------------------------------------
+      # Job 2: Container Image Scan
+      # Depends on IaCScan completing (successfully or failed).
+      # Runs both JSON and SARIF scans and publishes both artifacts.
+      # ---------------------------------------------------------------
+      - job: ImageScan
+        displayName: 'Container Image Scan'
+        dependsOn: IaCScan
+        steps:
+          - checkout: self
+
+          # Build the container image before scanning
+          - bash: docker build -t $(IMAGE_TAG) .
+            displayName: 'Build Container Image'
+
+          # Download FCSCLI (separate job, separate agent)
+          - bash: bash scripts/download-fcscli.sh
+            displayName: 'Download FCSCLI'
+            env:
+              FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
+              FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+
+          # JSON scan — used for artifact storage and report generation
+          - bash: |
+              ./fcs scan image $(IMAGE_TAG) \
+                --format json \
+                --output image-scan-results.json \
+                --upload \
+                --minimum-exprt high \
+                --timeout 600
+            displayName: 'Run Image Scan (JSON)'
+            continueOnError: true
+            env:
+              FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
+              FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+
+          # SARIF scan — can be ingested by Azure DevOps security dashboards
+          - bash: |
+              ./fcs scan image $(IMAGE_TAG) \
+                --format sarif \
+                --output image-scan-results.sarif \
+                --minimum-exprt high \
+                --timeout 600
+            displayName: 'Run Image Scan (SARIF)'
+            continueOnError: true
+            env:
+              FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
+              FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+
+          # Always publish both result files
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Image Scan Results'
+            condition: always()
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)'
+              artifact: 'image-scan-results'
+              publishLocation: 'pipeline'
+              patterns: |
+                image-scan-results.json
+                image-scan-results.sarif

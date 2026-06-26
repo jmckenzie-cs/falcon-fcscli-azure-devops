@@ -1,0 +1,113 @@
+# Falcon Cloud Security — IaC Scan Pipeline
+#
+# Standalone pipeline for scanning Infrastructure as Code with FCSCLI.
+# Produces JSON and SARIF artifacts and enforces a severity-based gate.
+#
+# PREREQUISITES
+#   Variable group: falcon-credentials
+#     FALCON_CLIENT_ID     — CrowdStrike OAuth2 Client ID  (mark as secret)
+#     FALCON_CLIENT_SECRET — CrowdStrike OAuth2 Client Secret (mark as secret)
+#
+# SETUP
+#   1. In Azure DevOps: Pipelines → Library → + Variable group
+#   2. Name it "falcon-credentials" and add the two variables above
+#   3. On the Pipeline permissions tab, authorize this pipeline
+#   4. Update IAC_PATH below if your IaC files are not in iac/
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - iac/**
+      - terraform/**
+      - kubernetes/**
+      - cloudformation/**
+      - '**/*.tf'
+      - '**/*.yaml'
+      - '**/*.yml'
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Variable group supplies FALCON_CLIENT_ID and FALCON_CLIENT_SECRET as secrets
+  - group: falcon-credentials
+  # Update this to the root directory of your IaC files
+  - name: IAC_PATH
+    value: 'iac/'
+
+stages:
+  - stage: IaCScan
+    displayName: 'IaC Security Scan'
+    jobs:
+      - job: ScanIaC
+        displayName: 'Scan Infrastructure as Code'
+        steps:
+          - checkout: self
+
+          # Download FCSCLI using API credentials from the variable group
+          - bash: bash scripts/download-fcscli.sh
+            displayName: 'Download FCSCLI'
+            env:
+              FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
+              FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+
+          # Run IaC scan
+          # --fail-on "critical=1,high=1" blocks on any critical or high finding
+          # Adjust thresholds to match your organization's policy
+          # continueOnError allows artifact upload even when the scan finds issues
+          - bash: |
+              mkdir -p iac-scan-output
+              ./fcs scan iac \
+                --path $(IAC_PATH) \
+                --report-formats json,sarif \
+                --output-path iac-scan-output/ \
+                --upload \
+                --fail-on "critical=1,high=1"
+              IAC_EXIT=$?
+              # Propagate exit code to the gate step via a pipeline variable
+              echo "##vso[task.setvariable variable=IacScanExit]$IAC_EXIT"
+              exit $IAC_EXIT
+            displayName: 'Run IaC Scan'
+            continueOnError: true
+            env:
+              FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
+              FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+
+          # Always publish artifacts so results are available even on failure
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish IaC Scan Results'
+            condition: always()
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)/iac-scan-output'
+              artifact: 'iac-scan-results'
+              publishLocation: 'pipeline'
+
+          # Gate: re-raise the scan exit code after artifacts are uploaded
+          # Exit code 0  = clean scan (no findings at threshold)
+          # Exit code 1  = findings at or above --fail-on threshold → block
+          # Exit code 201-207 = configuration/auth error → also blocks with specific message
+          - bash: |
+              EXIT=$(IacScanExit)
+              case "$EXIT" in
+                0)   echo "IaC scan passed — no critical or high findings." ;;
+                1)   echo "##vso[task.logissue type=error]IaC scan found critical or high severity issues. Review the iac-scan-results artifact."
+                     exit 1 ;;
+                201) echo "##vso[task.logissue type=error]Authentication failed (exit 201). Verify FALCON_CLIENT_ID and FALCON_CLIENT_SECRET in the falcon-credentials variable group."
+                     exit 1 ;;
+                202) echo "##vso[task.logissue type=error]Insufficient API permissions (exit 202). Ensure the API client has Infrastructure as Code: Read/Write scope."
+                     exit 1 ;;
+                203) echo "##vso[task.logissue type=error]Rate limit exceeded (exit 203). Consider adding a retry delay or reducing scan frequency."
+                     exit 1 ;;
+                *)   echo "##vso[task.logissue type=error]FCSCLI exited with code $EXIT. Check the scan step logs for details."
+                     exit 1 ;;
+              esac
+            displayName: 'Enforce IaC Gate'

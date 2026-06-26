@@ -1,0 +1,123 @@
+# Falcon Cloud Security — Container Image Scan Pipeline
+#
+# Standalone pipeline for scanning container images with FCSCLI.
+# Produces JSON and SARIF artifacts and enforces an ExPRT-based gate.
+#
+# PREREQUISITES
+#   Variable group: falcon-credentials
+#     FALCON_CLIENT_ID     — CrowdStrike OAuth2 Client ID  (mark as secret)
+#     FALCON_CLIENT_SECRET — CrowdStrike OAuth2 Client Secret (mark as secret)
+#
+# SETUP
+#   1. In Azure DevOps: Pipelines → Library → + Variable group
+#   2. Name it "falcon-credentials" and add the two variables above
+#   3. On the Pipeline permissions tab, authorize this pipeline
+#   4. Update IMAGE_TAG below to match your image name
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    include:
+      - containers/**
+      - Dockerfile
+      - '**/Dockerfile'
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Variable group supplies FALCON_CLIENT_ID and FALCON_CLIENT_SECRET as secrets
+  - group: falcon-credentials
+  # Update this to match your image name and tag convention
+  - name: IMAGE_TAG
+    value: 'myapp:$(Build.SourceVersion)'
+
+stages:
+  - stage: ImageScan
+    displayName: 'Container Image Scan'
+    jobs:
+      - job: ScanImage
+        displayName: 'Scan Container Image'
+        steps:
+          - checkout: self
+
+          # Build the container image before scanning
+          - bash: docker build -t $(IMAGE_TAG) .
+            displayName: 'Build Container Image'
+
+          # Download FCSCLI using API credentials from the variable group
+          - bash: bash scripts/download-fcscli.sh
+            displayName: 'Download FCSCLI'
+            env:
+              FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
+              FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+
+          # JSON scan — used for artifact storage and report generation
+          # continueOnError allows artifact upload even when the scan finds issues
+          - bash: |
+              ./fcs scan image $(IMAGE_TAG) \
+                --format json \
+                --output image-scan-results.json \
+                --upload \
+                --minimum-exprt high \
+                --timeout 600
+              IMAGE_EXIT=$?
+              echo "##vso[task.setvariable variable=ImageScanExit]$IMAGE_EXIT"
+              exit $IMAGE_EXIT
+            displayName: 'Run Image Scan (JSON)'
+            continueOnError: true
+            env:
+              FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
+              FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+
+          # SARIF scan — can be ingested by Azure DevOps security dashboards
+          - bash: |
+              ./fcs scan image $(IMAGE_TAG) \
+                --format sarif \
+                --output image-scan-results.sarif \
+                --minimum-exprt high \
+                --timeout 600
+            displayName: 'Run Image Scan (SARIF)'
+            continueOnError: true
+            env:
+              FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
+              FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+
+          # Always publish both result files so they are available for review
+          - task: PublishPipelineArtifact@1
+            displayName: 'Publish Image Scan Results'
+            condition: always()
+            inputs:
+              targetPath: '$(System.DefaultWorkingDirectory)'
+              artifact: 'image-scan-results'
+              publishLocation: 'pipeline'
+              patterns: |
+                image-scan-results.json
+                image-scan-results.sarif
+
+          # Gate: re-raise the JSON scan exit code after artifacts are uploaded
+          # Exit code 0  = clean scan
+          # Exit code 1  = findings at or above --minimum-exprt threshold → block
+          # Exit code 201-207 = configuration/auth error → also blocks with specific message
+          - bash: |
+              EXIT=$(ImageScanExit)
+              case "$EXIT" in
+                0)   echo "Image scan passed — no ExPRT high/critical findings." ;;
+                1)   echo "##vso[task.logissue type=error]Image scan found ExPRT high or critical vulnerabilities. Review the image-scan-results artifact."
+                     exit 1 ;;
+                201) echo "##vso[task.logissue type=error]Authentication failed (exit 201). Verify FALCON_CLIENT_ID and FALCON_CLIENT_SECRET in the falcon-credentials variable group."
+                     exit 1 ;;
+                202) echo "##vso[task.logissue type=error]Insufficient API permissions (exit 202). Ensure the API client has Falcon Container CLI and Falcon Container Image scopes."
+                     exit 1 ;;
+                *)   echo "##vso[task.logissue type=error]FCSCLI exited with code $EXIT. Check the scan step logs for details."
+                     exit 1 ;;
+              esac
+            displayName: 'Enforce Image Scan Gate'
