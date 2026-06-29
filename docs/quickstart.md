@@ -8,8 +8,48 @@ Get your first security scan running in Azure DevOps pipelines in about 5 minute
 
 - Active CrowdStrike Falcon Cloud Security subscription
 - Access to the Falcon Console ([https://falcon.crowdstrike.com](https://falcon.crowdstrike.com))
-- An Azure DevOps project with Pipelines enabled
+- A Microsoft account (personal or work/school)
 - Docker installed on your build agents (for image scanning)
+
+---
+
+## Step 0 — Get into Azure DevOps and enable Pipelines
+
+> **Important:** Azure DevOps is a separate product from the Azure Portal. If you are at `portal.azure.com` you are in the wrong place. Azure DevOps lives at `dev.azure.com`.
+
+### 0a — Sign in to Azure DevOps
+
+1. Go to **[https://dev.azure.com](https://dev.azure.com)**
+2. Sign in with your Microsoft account
+
+### 0b — Create or select an Organization
+
+An Organization is the top-level container. You may already have one from a previous sign-in.
+
+- If you see an organization listed, click it to open it.
+- If not, click **Create new organization**, accept the Terms of Service, give it a name (e.g., your company name), and click **Continue**.
+
+### 0c — Create a Project
+
+Inside your organization you need at least one Project.
+
+1. Click **New project** (top right)
+2. Give it a name (e.g., `my-app`)
+3. Set visibility to **Private**
+4. Click **Create**
+
+### 0d — Enable Pipelines
+
+By default, some Azure DevOps features may be turned off for new projects.
+
+1. In your project, click **Project settings** (gear icon, bottom-left corner)
+2. Under the **Boards** section in the left panel, look for **Services** — or scroll to find **Azure Pipelines**
+3. If you see a toggle next to **Pipelines** that is **Off**, click it to turn it **On**
+4. Click **Save**
+
+After saving, go back to your project's main page. You should now see **Pipelines** (rocket icon) in the left sidebar.
+
+> If you still do not see Pipelines, check that your account has the **Project Administrator** role: **Project settings → Permissions → Groups → Project Administrators** — your account must be listed there.
 
 ---
 
