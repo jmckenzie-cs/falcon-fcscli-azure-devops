@@ -193,6 +193,16 @@ download_and_verify() {
     echo "$output_path"
 }
 
+extract_binary() {
+    local archive="$1"
+
+    log_info "Extracting binary from $archive..."
+    tar -xzf "$archive" -C "${OUTPUT_DIR}" fcs
+    chmod +x "${OUTPUT_DIR}/fcs"
+    rm -f "$archive"
+    log_success "Binary ready: ${OUTPUT_DIR}/fcs"
+}
+
 main() {
     log_info "FCSCLI Programmatic Download Script"
     echo
@@ -209,13 +219,12 @@ main() {
     local downloaded_file
     downloaded_file=$(download_and_verify "$token" "$info")
 
+    extract_binary "$downloaded_file"
+
     echo
-    log_success "Download complete: $downloaded_file"
+    log_success "FCSCLI is ready at ${OUTPUT_DIR}/fcs"
     echo
     echo "Next steps:"
-    echo "  tar -xzf $downloaded_file"
-    echo "  chmod +x fcs"
-    echo "  sudo mv fcs /usr/local/bin/"
     echo "  fcs configure"
     echo
 }

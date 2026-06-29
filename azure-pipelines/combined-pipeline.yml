@@ -106,6 +106,7 @@ stages:
       - job: ImageScan
         displayName: 'Container Image Scan'
         dependsOn: IaCScan
+        condition: succeeded('IaCScan')
         steps:
           - checkout: self
 

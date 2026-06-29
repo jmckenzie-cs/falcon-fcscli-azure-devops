@@ -12,8 +12,8 @@ This document covers all environment variables and key CLI flags used by FCSCLI 
 |---|---|---|
 | `FALCON_CLIENT_ID` | Yes | CrowdStrike OAuth2 Client ID |
 | `FALCON_CLIENT_SECRET` | Yes | CrowdStrike OAuth2 Client Secret |
-| `FALCON_CLOUD` | No | Falcon region: `us-1`, `us-2`, `eu-1`, `us-gov-1`, `us-gov-2` (default: `us-1`) |
-| `FALCON_API_URL` | No | Full API base URL — use when `FALCON_CLOUD` is not sufficient (e.g., `https://api.us-2.crowdstrike.com`) |
+| `FALCON_CLOUD` | No | Falcon region: `us-1`, `us-2`, `eu-1`, `us-gov-1`, `us-gov-2` (default: `us-1`). Used by `fcs configure` and interactive CLI. **Not read by `download-fcscli.sh`** — use `FALCON_API_URL` for that script. |
+| `FALCON_API_URL` | No | Full API base URL — takes precedence over `FALCON_CLOUD`. Required for `download-fcscli.sh` in non-`us-1` regions. Example: `https://api.eu-1.crowdstrike.com` |
 
 ### Region Reference
 

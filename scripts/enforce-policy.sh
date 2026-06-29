@@ -64,12 +64,16 @@ usage() {
 }
 
 check_dependencies() {
-    for cmd in fcs jq; do
-        if ! command -v "$cmd" &> /dev/null; then
+    for cmd in ./fcs jq; do
+        if ! command -v "$cmd" &> /dev/null && [[ "$cmd" == "jq" ]]; then
             log_error "'$cmd' not found. Please install it before running this script."
             exit 1
         fi
     done
+    if [[ ! -x "./fcs" ]]; then
+        log_error "'./fcs' not found or not executable. Run scripts/download-fcscli.sh first."
+        exit 1
+    fi
 }
 
 run_scan() {
@@ -78,9 +82,9 @@ run_scan() {
     local output_file
     output_file=$(mktemp --suffix=.json)
 
-    log_info "Running: fcs scan $scan_type $target"
+    log_info "Running: ./fcs scan $scan_type $target"
 
-    if fcs scan "$scan_type" "$target" --output json > "$output_file" 2>&1; then
+    if ./fcs scan "$scan_type" "$target" --output json > "$output_file" 2>&1; then
         log_success "Scan completed"
     else
         local code=$?

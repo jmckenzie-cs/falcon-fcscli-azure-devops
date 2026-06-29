@@ -26,8 +26,6 @@ trigger:
       - kubernetes/**
       - cloudformation/**
       - '**/*.tf'
-      - '**/*.yaml'
-      - '**/*.yml'
 
 pr:
   branches:

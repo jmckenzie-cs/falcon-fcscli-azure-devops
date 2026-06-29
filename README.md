@@ -12,8 +12,8 @@ This repository provides ready-to-use Azure DevOps pipeline templates and helper
 │   ├── image-scan-pipeline.yml    # Container image scan only
 │   └── iac-scan-pipeline.yml      # IaC scan only
 ├── scripts/
-│   ├── install-fcscli.sh          # Install FCSCLI from a local download
-│   ├── download-fcscli.sh         # Download FCSCLI via CrowdStrike API
+│   ├── download-fcscli.sh         # Download + extract FCSCLI via CrowdStrike API (used by pipelines)
+│   ├── install-fcscli.sh          # Install FCSCLI from a manually downloaded archive (use on self-hosted agents or air-gapped environments)
 │   ├── enforce-policy.sh          # Fail builds based on severity thresholds
 │   └── generate-report.sh         # Convert JSON scan results to HTML report
 ├── examples/
@@ -33,7 +33,7 @@ This repository provides ready-to-use Azure DevOps pipeline templates and helper
 |-------------|---------|
 | CrowdStrike Subscription | Active Falcon Cloud Security license |
 | API Credentials | OAuth2 Client ID + Secret (see [docs/quickstart.md](docs/quickstart.md)) |
-| API Scopes | `Falcon Container CLI: Read/Write`, `Falcon Container Image: Read/Write`, `Infrastructure as Code: Read/Write` |
+| API Scopes | `Falcon Container CLI: Read/Write`, `Falcon Container Image: Read/Write`, `Infrastructure as Code: Read/Write`, `Cloud Security Tools Download: Read` |
 | Azure DevOps | A project with Pipelines enabled |
 | Azure DevOps Variable Group | Named `falcon-credentials` containing `FALCON_CLIENT_ID` and `FALCON_CLIENT_SECRET` (see below) |
 | Build Agent | Ubuntu-based agent with Docker installed (for image scanning) |
