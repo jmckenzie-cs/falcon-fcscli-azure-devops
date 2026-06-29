@@ -20,7 +20,9 @@ This repository provides ready-to-use Azure DevOps pipeline templates and helper
 │   ├── image-scan-examples.sh     # Image scanning patterns and jq parsing
 │   └── iac-scan-examples.sh       # IaC scanning patterns and policy examples
 └── docs/
-    ├── quickstart.md              # 5-minute setup guide
+    ├── configuration.md           # Environment variables and options reference
+    └── ci-cd-integration.md       # Pipeline integration guide
+QUICKSTART.md                      # 5-minute setup guide (start here)
     ├── configuration.md           # Environment variables and options reference
     └── ci-cd-integration.md       # Pipeline integration guide
 ```
@@ -32,7 +34,7 @@ This repository provides ready-to-use Azure DevOps pipeline templates and helper
 | Requirement | Details |
 |-------------|---------|
 | CrowdStrike Subscription | Active Falcon Cloud Security license |
-| API Credentials | OAuth2 Client ID + Secret (see [docs/quickstart.md](docs/quickstart.md)) |
+| API Credentials | OAuth2 Client ID + Secret (see [QUICKSTART.md](QUICKSTART.md)) |
 | API Scopes | `Falcon Container CLI: Read/Write`, `Falcon Container Image: Read/Write`, `Infrastructure as Code: Read/Write`, `Cloud Security Tools Download: Read` |
 | Azure DevOps | A project with Pipelines enabled |
 | Azure DevOps Variable Group | Named `falcon-credentials` containing `FALCON_CLIENT_ID` and `FALCON_CLIENT_SECRET` (see below) |
@@ -84,7 +86,7 @@ Then update the pipeline variables to match your image name and IaC paths.
 6. On the first run, Azure DevOps will prompt you to authorize access to the `falcon-credentials` variable group — click **Permit**
 7. Click **Run pipeline**
 
-For a screen-by-screen walkthrough including the variable group authorization prompt, see **[docs/quickstart.md](docs/quickstart.md)**.
+For a screen-by-screen walkthrough including the variable group authorization prompt, see **[QUICKSTART.md](QUICKSTART.md)**.
 
 ---
 
@@ -117,7 +119,7 @@ Adjust `--fail-on` (IaC) and `--minimum-exprt` (images) in the pipeline YAMLs to
 
 ## Further Reading
 
-- [docs/quickstart.md](docs/quickstart.md) — Credentials setup, first scan, common errors
+- [QUICKSTART.md](QUICKSTART.md) — Credentials setup, first scan, common errors
 - [docs/configuration.md](docs/configuration.md) — All environment variables and CLI flags
 - [docs/ci-cd-integration.md](docs/ci-cd-integration.md) — Exit code reference, artifact best practices, performance tips
 

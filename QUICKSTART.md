@@ -258,7 +258,7 @@ Increase the `--timeout` value in the scan step (default is 300 seconds):
 
 ## Next Steps
 
-- [docs/configuration.md](configuration.md) — All environment variables and CLI flags
-- [docs/ci-cd-integration.md](ci-cd-integration.md) — Exit code reference, artifact tips, performance optimization
+- [docs/configuration.md](docs/configuration.md) — All environment variables and CLI flags
+- [docs/ci-cd-integration.md](docs/ci-cd-integration.md) — Exit code reference, artifact tips, performance optimization
 - `examples/image-scan-examples.sh` — Additional image scanning patterns
 - `examples/iac-scan-examples.sh` — Additional IaC scanning patterns and policy enforcement examples
