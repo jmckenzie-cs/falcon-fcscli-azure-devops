@@ -57,6 +57,7 @@ stages:
             env:
               FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
               FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+              FALCON_API_URL: $(FALCON_API_URL)
 
           # Run IaC scan
           # --fail-on "critical=1,high=1" blocks on any critical or high finding

@@ -61,6 +61,7 @@ stages:
             env:
               FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
               FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+              FALCON_API_URL: $(FALCON_API_URL)
 
           # Run IaC scan; continueOnError lets us upload artifacts before failing
           - bash: |

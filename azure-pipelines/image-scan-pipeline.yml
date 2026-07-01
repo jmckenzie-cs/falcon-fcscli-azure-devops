@@ -59,6 +59,7 @@ stages:
             env:
               FALCON_CLIENT_ID: $(FALCON_CLIENT_ID)
               FALCON_CLIENT_SECRET: $(FALCON_CLIENT_SECRET)
+              FALCON_API_URL: $(FALCON_API_URL)
 
           # JSON scan — used for artifact storage and report generation
           # continueOnError allows artifact upload even when the scan finds issues
