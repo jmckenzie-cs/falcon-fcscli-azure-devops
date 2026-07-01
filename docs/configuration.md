@@ -147,8 +147,9 @@ fcs scan iac [FLAGS]
 | Code | Meaning | Recommended Response |
 |---|---|---|
 | 0 | Clean — no findings at threshold | Continue pipeline |
-| 1 | Findings at or above threshold | Block pipeline |
+| 1 | Findings at or above threshold (image scan) | Block pipeline |
 | 2 | General error (network, parse) | Fail pipeline |
+| 40 | Policy violation — findings exceeded threshold (IaC scan) | Block pipeline |
 | 201 | Authentication failed | Fail — verify credentials and region |
 | 202 | Insufficient API permissions | Fail — check API client scopes |
 | 203 | Rate limit exceeded | Retry with exponential backoff |

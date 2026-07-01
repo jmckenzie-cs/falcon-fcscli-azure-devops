@@ -76,9 +76,13 @@ After saving, go back to your project's main page. You should now see **Pipeline
 1. In Azure DevOps, go to **Pipelines → Library**
 2. Click **+ Variable group**
 3. Name it exactly: `falcon-credentials`
-4. Add two variables and mark each as **secret (lock icon)**:
-   - `FALCON_CLIENT_ID` — paste your Client ID
-   - `FALCON_CLIENT_SECRET` — paste your Client Secret
+4. Add the following variables:
+   - `FALCON_CLIENT_ID` — paste your Client ID (mark as **secret**)
+   - `FALCON_CLIENT_SECRET` — paste your Client Secret (mark as **secret**)
+   - `FALCON_API_URL` — your regional API base URL (**required if your tenant is not US-1**):
+     - US-1: omit this variable (scripts default to `https://api.crowdstrike.com`)
+     - US-2: `https://api.us-2.crowdstrike.com`
+     - EU-1: `https://api.eu-1.crowdstrike.com`
 5. Click **Save**
 6. Click the **Pipeline permissions** tab and authorize the pipeline(s) that will use this group
 
@@ -227,12 +231,7 @@ Verify the variable group contents and that the pipeline has permission to use i
 
 1. **Pipelines → Library → falcon-credentials → Pipeline permissions** — confirm your pipeline is listed
 2. Confirm `FALCON_CLIENT_ID` and `FALCON_CLIENT_SECRET` are marked as secret and contain the correct values
-3. Check the Falcon Console URL to confirm your region:
-   - `us-1` → `https://falcon.crowdstrike.com`
-   - `us-2` → `https://falcon.us-2.crowdstrike.com`
-   - `eu-1` → `https://falcon.eu-1.crowdstrike.com`
-
-If your tenant is not `us-1`, set `FALCON_API_URL` in the variable group or update the `download-fcscli.sh` call in the pipeline to pass the correct regional URL.
+3. Check the Falcon Console URL to confirm your region and ensure `FALCON_API_URL` is set in the variable group accordingly (see Step 2).
 
 ### "Insufficient permissions" (exit code 202)
 

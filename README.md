@@ -19,12 +19,10 @@ This repository provides ready-to-use Azure DevOps pipeline templates and helper
 ├── examples/
 │   ├── image-scan-examples.sh     # Image scanning patterns and jq parsing
 │   └── iac-scan-examples.sh       # IaC scanning patterns and policy examples
-└── docs/
-    ├── configuration.md           # Environment variables and options reference
-    └── ci-cd-integration.md       # Pipeline integration guide
-QUICKSTART.md                      # 5-minute setup guide (start here)
-    ├── configuration.md           # Environment variables and options reference
-    └── ci-cd-integration.md       # Pipeline integration guide
+├── docs/
+│   ├── configuration.md           # Environment variables and options reference
+│   └── ci-cd-integration.md       # Pipeline integration guide
+└── QUICKSTART.md                  # 5-minute setup guide (start here)
 ```
 
 ---
@@ -48,9 +46,13 @@ QUICKSTART.md                      # 5-minute setup guide (start here)
 
 1. In Azure DevOps, go to **Pipelines → Library → + Variable group**
 2. Name it exactly: `falcon-credentials`
-3. Add two variables and mark each as **secret**:
-   - `FALCON_CLIENT_ID` — your CrowdStrike OAuth2 Client ID
-   - `FALCON_CLIENT_SECRET` — your CrowdStrike OAuth2 Client Secret
+3. Add the following variables:
+   - `FALCON_CLIENT_ID` — your CrowdStrike OAuth2 Client ID (mark as **secret**)
+   - `FALCON_CLIENT_SECRET` — your CrowdStrike OAuth2 Client Secret (mark as **secret**)
+   - `FALCON_API_URL` — your regional API base URL (**required if your tenant is not US-1**):
+     - US-1: omit this variable (scripts default to `https://api.crowdstrike.com`)
+     - US-2: `https://api.us-2.crowdstrike.com`
+     - EU-1: `https://api.eu-1.crowdstrike.com`
 4. Click **Save**
 5. On the **Pipeline permissions** tab, authorize the pipelines that will use this group
 
